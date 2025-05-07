@@ -1,7 +1,6 @@
 import numpy as np
 import pandas as pd
 import networkx as nx
-import matplotlib.pyplot as plt
 import os
 
 ### *** HELPER FUNCTIONS *** ###
@@ -67,7 +66,7 @@ policies_path = os.path.join(openfema_dir,'FimaNfipPolicies.parquet')
 policies = pd.read_parquet(policies_path,engine='pyarrow',columns=usecols,filters=[('propertyState','=',state)])
 
 # Filter out pre-2009 policy data (doesn't reflect full policy base in force)
-cutoff_date = '2010-01-01'
+cutoff_date = '2009-01-01'
 
 m = (policies['policyEffectiveDate']>=cutoff_date)
 policies = policies[m].reset_index(drop=True).set_index('id')
