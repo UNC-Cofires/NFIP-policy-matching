@@ -3,7 +3,7 @@
 #SBATCH -p general
 #SBATCH -N 1
 #SBATCH -n 1
-#SBATCH --mem=180g
+#SBATCH --mem=300g
 #SBATCH -t 1-00:00:00
 #SBATCH --mail-type=all
 #SBATCH --job-name=concat_data

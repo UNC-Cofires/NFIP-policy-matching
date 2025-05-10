@@ -89,6 +89,7 @@ outname = os.path.join(pwd,'report.txt')
 
 n_policies = len(policies)
 n_claims = len(claims)
+n_stints = len(policies['stint_id'].dropna().unique())
 
 policy_matching_outcomes = str(policies['matching_outcome'].value_counts())
 claim_matching_outcomes = str(claims['matching_outcome'].value_counts())
@@ -98,6 +99,7 @@ with open('report.txt','w') as f:
     f.write('\n\n*** Policy-to-Policy Matching ***\n\n')
     f.write(f'Starting number of policies: {n_policies}\n\n')
     f.write(policy_matching_outcomes)
+    f.write(f'\nNumber of unique stints: {n_stints}')
     
     f.write('\n\n*** Claim-to-Policy Matching ***\n\n')
     f.write(f'Starting number of claims: {n_claims}\n\n')
