@@ -5,7 +5,7 @@ import os
 
 ### *** HELPER FUNCTIONS *** ###
 
-def temporal_matching(df,buffer_days=0):
+def temporal_matching(df,CBG_dict,buffer_days=0):
     """
     This function will attempt to match NFIP policy records expiring on a given date with those that go
     into effect on the same date (+/- some number of buffer days), with the goal of identifying policy 
@@ -13,6 +13,11 @@ def temporal_matching(df,buffer_days=0):
     
     This function should be applied to dataframes that have already been grouped or filtered based on 
     time-invariant property characteristics to narrow down the number of options. 
+
+    The "CBG_dict" parameter is a dictionary that returns a list of potentially overlapping census block group (CBG) FIPS codes 
+    for a given input CBG FIPS. Because FEMA uses a mix of different CBG vintages (without listing the vintage year) we want to 
+    allow for the possibility that the CBG FIPS of a given policyholder might change from year to year. However, we can restrict
+    the list of allowed CBG FIPS based on the overlap between census geometries from different years. 
     """
     
     match_df = pd.DataFrame(index=df.index)
@@ -23,7 +28,11 @@ def temporal_matching(df,buffer_days=0):
     for i in range(len(df)):
         
         termination_date = df['policyTerminationDate'].iloc[i]
-        m = (np.abs((df['policyEffectiveDate'] - termination_date).dt.days) <= buffer_days)
+        CBG_FIPS = df['censusBlockGroupFips'].iloc[i]
+        
+        m1 = (np.abs((df['policyEffectiveDate'] - termination_date).dt.days) <= buffer_days)
+        m2 = (df['censusBlockGroupFips'].isin(CBG_dict[CBG_FIPS]))
+        m = m1&m2
         
         num_match = np.sum(m)
         match_df.iloc[i,1] = num_match
@@ -50,17 +59,22 @@ if not os.path.exists(outfolder):
 # Specify path to OpenFEMA data
 openfema_dir = '/proj/characklab/projects/kieranf/OpenFEMA'
 
+# Specify path to census block group crosswalk data
+crosswalk_path = os.path.join(pwd,'NHGIS_crosswalks/CBG_intersections.parquet')
+
 # Specify property-specific columns that will be used for matching
+# (Leaves out censusBlockGroupFips since we'll deal with that separately)
 time_invariant_columns = ['latitude',
                           'longitude',
-                          'censusBlockGroupFips',
                           'ratedFloodZone',
                           'reportedZipCode',
                           'originalNBDate',
                           'originalConstructionDate',
                           'numberOfFloorsInInsuredBuilding']
 
-usecols = ['id','propertyState','policyEffectiveDate','policyTerminationDate'] + time_invariant_columns
+### *** READ IN POLICY DATA *** ###
+
+usecols = ['id','propertyState','policyEffectiveDate','policyTerminationDate'] + time_invariant_columns + ['censusBlockGroupFips']
 
 policies_path = os.path.join(openfema_dir,'FimaNfipPolicies.parquet')
 policies = pd.read_parquet(policies_path,engine='pyarrow',columns=usecols,filters=[('propertyState','=',state)])
@@ -76,13 +90,52 @@ original_policy_ids = policies.index.to_list()
 
 # Filter out policies that are missing data on the attributes we'll use for matching
 
-incomplete_data_mask = policies[time_invariant_columns].isna().any(axis=1)
+incomplete_data_mask = policies[time_invariant_columns + ['censusBlockGroupFips']].isna().any(axis=1)
 incomplete_data_ids = policies[incomplete_data_mask].index.to_list()
 
 policies = policies[~incomplete_data_mask]
 
+# Cast latitude and longitude as strings for grouping purposes
+# (In general, it's risky to make grouping / equality comparisons on floats) 
+policies['latitude'] = policies['latitude'].apply(lambda x: f'{x:.1f}').astype('string[pyarrow]')
+policies['longitude'] = policies['longitude'].apply(lambda x: f'{x:.1f}').astype('string[pyarrow]')
+
+### *** MATCH CENSUS BLOCK GROUP FIPS TO DIFFERENT VINTAGES *** ###
+
+# FEMA used a third-party service to geocode their claim and policy data, 
+# which did not provide information on the vintage of the listed census block group (CBG). 
+# This is particularly annoying since the same CBG FIPS can be used for different geometries 
+# in different census years. For this reason, we'll need to use crosswalks to get a list of 
+# any CBG FIPS that might overlap with the one listed in the OpenFEMA data. 
+
+state_code = policies['censusBlockGroupFips'].apply(lambda x: x[:2]).mode()[0]
+crosswalk = pd.read_parquet(crosswalk_path)
+crosswalk = crosswalk[crosswalk['left_GEOID'].str.startswith(state_code)]
+
+vintage_2000_list = crosswalk[crosswalk['left_vintage']==2000]['left_GEOID'].unique()
+vintage_2010_list = crosswalk[crosswalk['left_vintage']==2010]['left_GEOID'].unique()
+vintage_2020_list = crosswalk[crosswalk['left_vintage']==2020]['left_GEOID'].unique()
+
+policies['CBG_2020_match'] = policies['censusBlockGroupFips'].isin(vintage_2020_list)
+policies['CBG_2010_match'] = policies['censusBlockGroupFips'].isin(vintage_2010_list)
+policies['CBG_2000_match'] = policies['censusBlockGroupFips'].isin(vintage_2000_list)
+
+# Sometimes, you'll have a policy where the census block group is for a completely different state
+# We'll exclude these from the final dataset since it implies something went wrong with the geocoding process
+bad_geocode_mask = ~policies[['CBG_2000_match','CBG_2010_match','CBG_2020_match']].any(axis=1)
+bad_geocode_ids = policies[bad_geocode_mask].index.to_list()
+policies = policies[~bad_geocode_mask]
+
+# From crosswalk data, create dictionary that does the following: 
+# For a given CBG FIPS code (of ambiguous year), 
+# return a list of CBG FIPS codes from various years that might overlap with input FIPS. 
+
+CBG_dict = crosswalk[['left_GEOID','right_GEOID']].drop_duplicates().groupby('left_GEOID').agg(lambda x: list(x))['right_GEOID'].to_dict()
+
+### *** ATTEMPT TO IDENTIFY POLICY RENEWALS *** ###
+
 # Group policies based on time-invariant characteristics, then attempt to identify policy renewals
-match_info = policies.groupby(time_invariant_columns,group_keys=False).apply(temporal_matching)
+match_info = policies.groupby(time_invariant_columns,group_keys=False).apply(temporal_matching,CBG_dict)
 
 # Save to file
 outname = os.path.join(outfolder,f'{state}_match_info.parquet')
@@ -140,6 +193,7 @@ matched_policy_ids = policies[~policies['stint_id'].isna()].index.to_list()
 
 selection_flow = pd.DataFrame({'id':original_policy_ids,'outcome':pd.NA})
 selection_flow.loc[selection_flow['id'].isin(incomplete_data_ids),'outcome'] = 'Excluded - Missing data'
+selection_flow.loc[selection_flow['id'].isin(bad_geocode_ids),'outcome'] = 'Excluded - Bad geocode'
 selection_flow.loc[selection_flow['id'].isin(unmatched_policy_ids),'outcome'] = 'Excluded - Multiple matches'
 selection_flow.loc[selection_flow['id'].isin(matched_policy_ids),'outcome'] = 'Included'
 
