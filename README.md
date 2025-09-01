@@ -9,14 +9,14 @@ The `match_policies.py` script identifies property-level NFIP enrollment "stints
 |---------------------------------|----------------------------------------------------------------------|
 | latitude                        | Approximate latitude of the insured property (to one decimal place)  |
 | longitude                       | Approximate longitude of the insured property (to one decimal place) |
-| censusBlockGroupFips\*          | U.S. Census block group of the insured property (see [note](https://github.com/UNC-Cofires/NFIP-policy-matching/edit/main/README.md#census-geographies)) |
+| censusBlockGroupFips\*          | U.S. Census block group of the insured property (see [note](https://github.com/UNC-Cofires/NFIP-policy-matching#census-geographies)) |
 | ratedFloodZone                  | Flood zone used to rate the insured property (e.g., A, V, X, etc.)   |
 | reportedZipCode                 | 5-digit postal zip code of the insured property                      |
 | originalNBDate                  | The original new business date of the insured property               |
 | originalConstructionDate        | The original construction date of the insured property               |
 | numberOfFloorsInInsuredBuilding | Code indicating the number of floors in the insured property         |
 
-\*See [note](https://github.com/UNC-Cofires/NFIP-policy-matching/edit/main/README.md#census-geographies) regarding Census geographies.
+\*See [note](https://github.com/UNC-Cofires/NFIP-policy-matching#census-geographies) regarding Census geographies.
 
 For a given property, the above characteristics are assumed to remain constant over time as its flood insurance policy is renewed, with the exception of Census block groups (which are allowed to vary within a narrow range of acceptable values). Within each grouping of the above characteristics, policy renewals are identified based on the start and end dates of the flood insurance policy under the assumption that the new policy goes into effect on the same day that the old policy expires. This matching procedure can result in the following outcomes: 
 
@@ -52,7 +52,7 @@ The `match_claims.py` script identifies policy records associated with claims in
 | originalConstructionDate        | The original construction date of the insured property               |
 | numberOfFloorsInInsuredBuilding | Code indicating the number of floors in the insured property         |
 
-\*See [note](https://github.com/UNC-Cofires/NFIP-policy-matching/edit/main/README.md#census-geographies) regarding Census geographies.
+\*See [note](https://github.com/UNC-Cofires/NFIP-policy-matching#census-geographies) regarding Census geographies.
 
 This matching procedure can result in the following outcomes: 
 
