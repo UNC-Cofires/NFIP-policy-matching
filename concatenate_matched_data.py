@@ -24,20 +24,11 @@ claim_selection_flow = pd.concat([pd.read_parquet(filepath) for filepath in clai
 openfema_dir = '/proj/characklab/projects/kieranf/OpenFEMA'
 
 policies_path = os.path.join(openfema_dir,'FimaNfipPolicies.parquet')
-policies = pd.read_parquet(policies_path,engine='pyarrow') 
+policies = pd.read_parquet(policies_path,engine='pyarrow')
 
 claims_path = os.path.join(openfema_dir,'FimaNfipClaims.parquet')
-claims = pd.read_parquet(claims_path,engine='pyarrow') 
+claims = pd.read_parquet(claims_path,engine='pyarrow')
 
-# Read in NFIP policy data that includes full-risk premiums obtained via FOIA request
-foia_policies_path = '/proj/characklab/flooddata/FOIA/FimaNfipPolicies_FOIA.parquet'
-foia_policies = pd.read_parquet(foia_policies_path,engine='pyarrow') 
-
-# Clean certain columns in FOIA data to match OpenFEMA conventions / data types
-foia_policies['reportedZipCode'] = foia_policies['reportedZipCode'].apply(lambda x: f'{x:0>5}').astype('string[pyarrow]')
-for col in ['policyEffectiveDate','policyTerminationDate','originalNBDate','originalConstructionDate']:
-    foia_policies[col] = foia_policies[col].astype('datetime64[us, UTC]')
-    
 # Get claim and policy info from time period of interest
 claims = claims[claims['id'].isin(claim_selection_flow['id'])]
 policies = policies[policies['id'].isin(policy_selection_flow['id'])]
@@ -51,30 +42,6 @@ claims = pd.merge(claims,claim_match_info.rename(columns={'claim_id':'id'}),on='
 
 # Attach stint info to policies
 policies = pd.merge(policies,stint_info,on='id',how='left')
-
-# Attach RR2.0 info to policies that have it
-
-match_cols = ['latitude',
-              'longitude',
-              'countyCode',
-              'ratedFloodZone',
-              'reportedZipCode',
-              'originalNBDate',
-              'numberOfFloorsInInsuredBuilding',
-              'policyEffectiveDate',
-              'policyTerminationDate',
-              'totalInsurancePremiumOfThePolicy']
-
-m1 = policies[match_cols].duplicated(keep=False)
-m2 = policies[match_cols].isna().any(axis=1)
-m3 = ~(m1|m2)
-
-foia_matches = pd.merge(foia_policies[['fullRiskPremium']+match_cols],policies[m3][['id']+match_cols],on=match_cols,how='left')
-foia_matches = foia_matches.dropna(subset=['id'])
-
-policies['rr2_foia_match_indicator'] = policies['id'].isin(foia_matches['id']).astype('int64[pyarrow]')
-policies = pd.merge(policies,foia_matches[['id','fullRiskPremium']],on='id',how='left')
-
 policies = policies.sort_values(by=['stint_id','policyEffectiveDate']).reset_index(drop=True)
 
 # Save to file
