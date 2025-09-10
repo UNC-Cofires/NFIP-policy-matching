@@ -1,0 +1,25 @@
+
+
+*** Policy-to-Policy Matching ***
+
+Starting number of policies: 70550494
+
+matching_outcome
+Included                       66339911
+Excluded - Multiple matches     3833863
+Excluded - Missing data          373689
+Excluded - Bad geocode             3031
+Name: count, dtype: int64
+Number of unique stints: 14277872
+
+*** Claim-to-Policy Matching ***
+
+Starting number of claims: 964409
+
+matching_outcome
+Included                       892563
+Excluded - Multiple matches     56849
+Excluded - Missing data         11177
+Excluded - No matches            3772
+Excluded - Bad geocode             48
+Name: count, dtype: int64
