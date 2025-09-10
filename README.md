@@ -24,7 +24,7 @@ For a given property, the above characteristics are assumed to remain constant o
 - 1 match: There is a single matching policy that goes into effect when the current policy expires. This typically occurs due to policy renewal. 
 - ≥2 matches: There are multiple potential policy matches that go into effect when the current policy expires. In this case, we cannot clearly determine which policy is the next member of the stint, and insurance coverage at the property ceases to be tracked over time.
 
-Among 69,159,981 policy records from the 2009-2025 period, 65,328,041 (94.5%) were uniquely identifiable based on the property characteristics listed above and their start/end dates. After matching policy renewals, a total of 14,270,591 coverage stints were identified, with an average of 4.6 years of follow-up time per stint. A total of 413,408 (0.6%) policies were excluded due to missing property characteristics, while 3,418,532 (4.9%) could not be uniquely distinguished based on their property characteristics and start/end dates, causing them to be exlcuded from coverage stints. 
+Among 70,550,494 policy records from the 2009-2025 period, 66,339,911 (94.0%) were uniquely identifiable based on the property characteristics listed above and their start/end dates. After matching policy renewals, a total of 14,277,872 coverage stints were identified, with an average of 4.6 years of follow-up time per stint. A total of 373,689 (0.5%) policies were excluded due to missing property characteristics, while 3,833,863 (5.4%) could not be uniquely distinguished based on their property characteristics and start/end dates, causing them to be exlcuded from coverage stints. A small number of policies (n=3031) were also excluded due to contradictory geographic information (e.g., state implied by census block group field does not match the property state field). 
 
 As part of this analysis, a modified version of the [FIMA NFIP Redacted Policies v2](https://www.fema.gov/openfema-data-page/fima-nfip-redacted-policies-v2) dataset was produced that contains the following additional data fields: 
 
@@ -60,7 +60,7 @@ This matching procedure can result in the following outcomes:
 - 1 match: The claim was matched one-to-one with a policy. This is the ideal outcome that we should expect to see most of the time.  
 - ≥2 matches: There are multiple potential policy matches that could be associated with the claim. In this case, the specific policy associated with the claim is ambiguous. 
 
-Among 997,119 claims from the 2009-2025 period, 930,954 (93.4%) were matched one-to-one with a policy. A total of 12,346 (1.2%) claims were excluded due to missing data, 16,777 (1.7%) were excluded because no matching policy record was found, and 37,042 (3.7%) were excluded because multiple potential policy matches were found. 
+Among 964,409 claims from the 2010-2025 period, 892,563 (92.6%) were matched one-to-one with a policy. A total of 11,177 (1.2%) claims were excluded due to missing data, 3,772 (0.4%) were excluded because no matching policy record was found, and 56,849 (5.9%) were excluded because multiple potential policy matches were found. A small number of claims (n=48) were also excluded due to contradictory geographic information (e.g., state implied by census block group field does not match the property state field). 
 
 As part of this analysis, a modified version of the [FIMA NFIP Redacted Claims v2](https://www.fema.gov/openfema-data-page/fima-nfip-redacted-claims-v2) dataset was produced that contains the following additional data fields: 
 
