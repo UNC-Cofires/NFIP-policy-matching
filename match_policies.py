@@ -28,10 +28,10 @@ def temporal_matching(df,CBG_dict,buffer_days=0):
     for i in range(len(df)):
         
         termination_date = df['policyTerminationDate'].iloc[i]
-        CBG_FIPS = df['censusBlockGroupFips'].iloc[i]
+        CBG_FIPS = df['censusGeoid'].iloc[i]
         
         m1 = (np.abs((df['policyEffectiveDate'] - termination_date).dt.days) <= buffer_days)
-        m2 = (df['censusBlockGroupFips'].isin(CBG_dict[CBG_FIPS]))
+        m2 = (df['censusGeoid'].isin(CBG_dict[CBG_FIPS]))
         m = m1&m2
         
         num_match = np.sum(m)
@@ -63,7 +63,7 @@ openfema_dir = '/proj/characklab/projects/kieranf/OpenFEMA'
 crosswalk_path = os.path.join(pwd,'NHGIS_crosswalks/CBG_intersections.parquet')
 
 # Specify property-specific columns that will be used for matching
-# (Leaves out censusBlockGroupFips since we'll deal with that separately)
+# (Leaves out censusGeoid since we'll deal with that separately)
 time_invariant_columns = ['latitude',
                           'longitude',
                           'ratedFloodZone',
@@ -74,10 +74,15 @@ time_invariant_columns = ['latitude',
 
 ### *** READ IN POLICY DATA *** ###
 
-usecols = ['id','propertyState','policyEffectiveDate','policyTerminationDate'] + time_invariant_columns + ['censusBlockGroupFips']
+usecols = ['id','propertyState','policyEffectiveDate','policyTerminationDate'] + time_invariant_columns + ['censusGeoid']
 
-policies_path = os.path.join(openfema_dir,'FimaNfipPolicies.parquet')
+policies_path = os.path.join(openfema_dir,'NfipPoliciesV3.parquet')
 policies = pd.read_parquet(policies_path,engine='pyarrow',columns=usecols,filters=[('propertyState','=',state)])
+
+# Set data type of datetime columns
+datetime_cols = ['policyEffectiveDate','policyTerminationDate','originalNBDate','originalConstructionDate']
+for col in datetime_cols:
+    policies[col] = pd.to_datetime(policies[col],errors='coerce')
 
 # Filter out pre-2009 policy data (doesn't reflect full policy base in force)
 cutoff_date = '2009-01-01'
@@ -90,7 +95,7 @@ original_policy_ids = policies.index.to_list()
 
 # Filter out policies that are missing data on the attributes we'll use for matching
 
-incomplete_data_mask = policies[time_invariant_columns + ['censusBlockGroupFips']].isna().any(axis=1)
+incomplete_data_mask = policies[time_invariant_columns + ['censusGeoid']].isna().any(axis=1)
 incomplete_data_ids = policies[incomplete_data_mask].index.to_list()
 
 policies = policies[~incomplete_data_mask]
@@ -108,7 +113,7 @@ policies['longitude'] = policies['longitude'].apply(lambda x: f'{x:.1f}').astype
 # in different census years. For this reason, we'll need to use crosswalks to get a list of 
 # any CBG FIPS that might overlap with the one listed in the OpenFEMA data. 
 
-state_code = policies['censusBlockGroupFips'].apply(lambda x: x[:2]).mode()[0]
+state_code = policies['censusGeoid'].apply(lambda x: x[:2]).mode()[0]
 crosswalk = pd.read_parquet(crosswalk_path)
 crosswalk = crosswalk[crosswalk['left_GEOID'].str.startswith(state_code)]
 
@@ -116,9 +121,9 @@ vintage_2000_list = crosswalk[crosswalk['left_vintage']==2000]['left_GEOID'].uni
 vintage_2010_list = crosswalk[crosswalk['left_vintage']==2010]['left_GEOID'].unique()
 vintage_2020_list = crosswalk[crosswalk['left_vintage']==2020]['left_GEOID'].unique()
 
-policies['CBG_2020_match'] = policies['censusBlockGroupFips'].isin(vintage_2020_list)
-policies['CBG_2010_match'] = policies['censusBlockGroupFips'].isin(vintage_2010_list)
-policies['CBG_2000_match'] = policies['censusBlockGroupFips'].isin(vintage_2000_list)
+policies['CBG_2020_match'] = policies['censusGeoid'].isin(vintage_2020_list)
+policies['CBG_2010_match'] = policies['censusGeoid'].isin(vintage_2010_list)
+policies['CBG_2000_match'] = policies['censusGeoid'].isin(vintage_2000_list)
 
 # Sometimes, you'll have a policy where the census block group is for a completely different state
 # We'll exclude these from the final dataset since it implies something went wrong with the geocoding process
