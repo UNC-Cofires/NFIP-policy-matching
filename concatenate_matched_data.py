@@ -23,10 +23,10 @@ claim_selection_flow = pd.concat([pd.read_parquet(filepath) for filepath in clai
 # Read in OpenFEMA policy & claim data
 openfema_dir = '/proj/characklab/projects/kieranf/OpenFEMA'
 
-policies_path = os.path.join(openfema_dir,'FimaNfipPolicies.parquet')
+policies_path = os.path.join(openfema_dir,'NfipPoliciesV3.parquet')
 policies = pd.read_parquet(policies_path,engine='pyarrow')
 
-claims_path = os.path.join(openfema_dir,'FimaNfipClaims.parquet')
+claims_path = os.path.join(openfema_dir,'NfipClaimsV3.parquet')
 claims = pd.read_parquet(claims_path,engine='pyarrow')
 
 # Get claim and policy info from time period of interest
@@ -45,10 +45,10 @@ policies = pd.merge(policies,stint_info,on='id',how='left')
 policies = policies.sort_values(by=['stint_id','policyEffectiveDate']).reset_index(drop=True)
 
 # Save to file
-outname = os.path.join(pwd,'FimaNfipPolicies_matched.parquet')
+outname = os.path.join(pwd,'NfipPoliciesV3_matched.parquet')
 policies.to_parquet(outname)
 
-outname = os.path.join(pwd,'FimaNfipClaims_matched.parquet')
+outname = os.path.join(pwd,'NfipClaimsV3_matched.parquet')
 claims.to_parquet(outname)
 
 # Generate report
