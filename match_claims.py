@@ -47,7 +47,7 @@ if not os.path.exists(outfolder):
 openfema_dir = '/proj/characklab/projects/kieranf/OpenFEMA'
 
 # Specify property-specific columns that will be used for matching
-# (Leave out censusBlockGroupFips since we'll deal with that separately)
+# (Leave out censusGeoid since we'll deal with that separately)
 
 match_cols = ['latitude',
               'longitude',
@@ -68,14 +68,22 @@ claim_match_cols = ['latitude',
 
 claim_rename_dict = {x:y for x,y in zip(claim_match_cols,match_cols)}
 
-policy_cols = ['id','propertyState','policyEffectiveDate','policyTerminationDate','censusBlockGroupFips'] + match_cols
-claim_cols = ['id','state','dateOfLoss','censusBlockGroupFips'] + claim_match_cols
+policy_cols = ['id','propertyState','policyEffectiveDate','policyTerminationDate','censusGeoid'] + match_cols
+claim_cols = ['id','state','dateOfLoss','censusGeoid'] + claim_match_cols
 
-policies_path = os.path.join(openfema_dir,'FimaNfipPolicies.parquet')
+# Load policies
+policies_path = os.path.join(openfema_dir,'NfipPoliciesV3.parquet')
 policies = pd.read_parquet(policies_path,engine='pyarrow',columns=policy_cols,filters=[('propertyState','=',state)])
+policies_datetime_cols = ['policyEffectiveDate','policyTerminationDate','originalNBDate','originalConstructionDate']
+for col in policies_datetime_cols:
+    policies[col] = pd.to_datetime(policies[col],errors='coerce')
 
-claims_path = os.path.join(openfema_dir,'FimaNfipClaims.parquet')
+# Load claims
+claims_path = os.path.join(openfema_dir,'NfipClaimsV3.parquet')
 claims = pd.read_parquet(claims_path,engine='pyarrow',columns=claim_cols,filters=[('state','=',state)])
+claims_datetime_cols = ['dateOfLoss','originalNBDate','originalConstructionDate']
+for col in claims_datetime_cols:
+    claims[col] = pd.to_datetime(claims[col],errors='coerce')
 
 # Filter out pre-2009 policy data (doesn't reflect full policy base in force)
 policy_cutoff_date = '2009-01-01'
@@ -107,7 +115,7 @@ policies = truncate_dates(policies,date_cols)
 claims = truncate_floats(claims)
 claims = truncate_dates(claims,date_cols)
 
-# *** FILTER OUT ENTRIES WITH MISSING DATA *** ###
+### *** FILTER OUT ENTRIES WITH MISSING DATA *** ###
 
 incomplete_data_mask = policies.isna().any(axis=1)
 policies = policies[~incomplete_data_mask]
@@ -126,7 +134,7 @@ claims = claims[~incomplete_data_mask]
 
 crosswalk_path = os.path.join(pwd,'NHGIS_crosswalks/CBG_intersections.parquet')
 
-state_code = policies['censusBlockGroupFips'].apply(lambda x: x[:2]).mode()[0]
+state_code = policies['censusGeoid'].apply(lambda x: x[:2]).mode()[0]
 crosswalk = pd.read_parquet(crosswalk_path)
 crosswalk = crosswalk[crosswalk['left_GEOID'].str.startswith(state_code)]
 
@@ -134,9 +142,9 @@ vintage_2000_list = crosswalk[crosswalk['left_vintage']==2000]['left_GEOID'].uni
 vintage_2010_list = crosswalk[crosswalk['left_vintage']==2010]['left_GEOID'].unique()
 vintage_2020_list = crosswalk[crosswalk['left_vintage']==2020]['left_GEOID'].unique()
 
-claims['CBG_2020_match'] = claims['censusBlockGroupFips'].isin(vintage_2020_list)
-claims['CBG_2010_match'] = claims['censusBlockGroupFips'].isin(vintage_2010_list)
-claims['CBG_2000_match'] = claims['censusBlockGroupFips'].isin(vintage_2000_list)
+claims['CBG_2020_match'] = claims['censusGeoid'].isin(vintage_2020_list)
+claims['CBG_2010_match'] = claims['censusGeoid'].isin(vintage_2010_list)
+claims['CBG_2000_match'] = claims['censusGeoid'].isin(vintage_2000_list)
 
 # Sometimes, you'll have a claim where the census block group is for a completely different state
 # We'll exclude these from the final dataset since it implies something went wrong with the geocoding process
@@ -165,8 +173,8 @@ for date in claims['dateOfLoss'].unique():
 
     for idx in indices:
 
-        CBG_FIPS = claims.loc[idx,'censusBlockGroupFips']
-        m1 = (policies_in_force['censusBlockGroupFips'].isin(CBG_dict[CBG_FIPS]))
+        CBG_FIPS = claims.loc[idx,'censusGeoid']
+        m1 = (policies_in_force['censusGeoid'].isin(CBG_dict[CBG_FIPS]))
         m2 = (policies_in_force[match_cols] == claims.loc[idx,match_cols]).all(axis=1)
 
         m = m1&m2
@@ -179,7 +187,6 @@ for date in claims['dateOfLoss'].unique():
             claims.loc[idx,'policy_id'] = policies_in_force[m]['policy_id'].values[0]
 
 # Drop claims that aren't matched to a policy, as well as those matched to multiple policies
-
 multiple_match_ids = claims[(claims['num_match'] > 1)]['claim_id'].to_list()
 unmatched_ids = claims[(claims['num_match'] == 0)]['claim_id'].to_list()
 matched_ids = claims[(claims['num_match'] == 1)]['claim_id'].to_list()
