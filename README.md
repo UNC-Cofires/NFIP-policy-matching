@@ -3,13 +3,13 @@ This project contains code to link individual records from the [OpenFEMA](https:
 
 ## Policy-to-policy matching
 
-The `match_policies.py` script identifies property-level NFIP enrollment "stints" from individual policy records in the [FIMA NFIP Redacted Policies v2](https://www.fema.gov/openfema-data-page/fima-nfip-redacted-policies-v2) dataset. Here, a "stint" is defined as a period of continuous insurance coverage (with no lapses) at a given property location. This is accomplished by first grouping policies based on the property characteristics listed below: 
+The `match_policies.py` script identifies property-level NFIP enrollment "stints" from individual policy records in the [NFIP Redacted Policies v3](https://www.fema.gov/openfema-data-page/nfip-redacted-policies-v3) dataset. Here, a "stint" is defined as a period of continuous insurance coverage (with no lapses) at a given property location. This is accomplished by first grouping policies based on the property characteristics listed below: 
 
 | Variable                        | Description                                                          |
 |---------------------------------|----------------------------------------------------------------------|
 | latitude                        | Approximate latitude of the insured property (to one decimal place)  |
 | longitude                       | Approximate longitude of the insured property (to one decimal place) |
-| censusBlockGroupFips\*          | U.S. Census block group of the insured property (see [note](https://github.com/UNC-Cofires/NFIP-policy-matching#census-geographies)) |
+| censusGeoid\*          | Census Block Group FIPS of the insured property (see [note](https://github.com/UNC-Cofires/NFIP-policy-matching#census-geographies)) |
 | ratedFloodZone                  | Flood zone used to rate the insured property (e.g., A, V, X, etc.)   |
 | reportedZipCode                 | 5-digit postal zip code of the insured property                      |
 | originalNBDate                  | The original new business date of the insured property               |
@@ -24,9 +24,9 @@ For a given property, the above characteristics are assumed to remain constant o
 - 1 match: There is a single matching policy that goes into effect when the current policy expires. This typically occurs due to policy renewal. 
 - ≥2 matches: There are multiple potential policy matches that go into effect when the current policy expires. In this case, we cannot clearly determine which policy is the next member of the stint, and insurance coverage at the property ceases to be tracked over time.
 
-Among 70,550,494 policy records from the 2009-2025 period, 66,339,911 (94.0%) were uniquely identifiable based on the property characteristics listed above and their start/end dates. After matching policy renewals, a total of 14,277,872 coverage stints were identified, with an average of 4.6 years of follow-up time per stint. A total of 373,689 (0.5%) policies were excluded due to missing property characteristics, while 3,833,863 (5.4%) could not be uniquely distinguished based on their property characteristics and start/end dates, causing them to be exlcuded from coverage stints. A small number of policies (n=3031) were also excluded due to contradictory geographic information (e.g., state implied by census block group field does not match the property state field). 
+Among 73,821,690 policy records from the 2009-2026 period, 69,399,644 (94.0%) were uniquely identifiable based on the property characteristics listed above and their start/end dates. After matching policy renewals, a total of 14,530,695 coverage stints were identified, with an average of 4.8 years of follow-up time per stint. A total of 376,093 (0.5%) policies were excluded due to missing property characteristics, while 4,042,603 (5.5%) could not be uniquely distinguished based on their property characteristics and start/end dates, causing them to be exlcuded from coverage stints. A small number of policies (n=3,350) were also excluded due to contradictory geographic information (e.g., state implied by census block group field does not match the property state field). 
 
-As part of this analysis, a modified version of the [FIMA NFIP Redacted Policies v2](https://www.fema.gov/openfema-data-page/fima-nfip-redacted-policies-v2) dataset was produced that contains the following additional data fields: 
+As part of this analysis, a modified version of the [NFIP Redacted Policies v3](https://www.fema.gov/openfema-data-page/nfip-redacted-policies-v3) dataset was produced that contains the following additional data fields: 
 
 | Variable         | Description                                                              |
 |------------------|--------------------------------------------------------------------------|
@@ -39,13 +39,13 @@ As part of this analysis, a modified version of the [FIMA NFIP Redacted Policies
 
 ## Claim-to-policy matching
 
-The `match_claims.py` script identifies policy records associated with claims in the [FIMA NFIP Redacted Claims v2](https://www.fema.gov/openfema-data-page/fima-nfip-redacted-claims-v2) dataset. For each claim, this is accomplished by first filtering out any policies that were not in force on the date when the loss occured. Next, the claim is matched to one or more of the remaining policies based on the following data fields that are common to both datasets: 
+The `match_claims.py` script identifies policy records associated with claims in the [NFIP Redacted Claims v3](https://www.fema.gov/openfema-data-page/nfip-redacted-claims-v3) dataset. For each claim, this is accomplished by first filtering out any policies that were not in force on the date when the loss occurred. Next, the claim is matched to one or more of the remaining policies based on the following data fields that are common to both datasets: 
 
 | Variable                        | Description                                                          |
 |---------------------------------|----------------------------------------------------------------------|
 | latitude                        | Approximate latitude of the insured property (to one decimal place)  |
 | longitude                       | Approximate longitude of the insured property (to one decimal place) |
-| censusBlockGroupFips\*          | U.S. Census block group of the insured property (see [note](https://github.com/UNC-Cofires/NFIP-policy-matching/edit/main/README.md#census-geographies)) |
+| censusGeoid\*          | Census Block Group FIPS of the insured property (see [note](https://github.com/UNC-Cofires/NFIP-policy-matching/edit/main/README.md#census-geographies)) |
 | ratedFloodZone                  | Flood zone used to rate the insured property (e.g., A, V, X, etc.)   |
 | reportedZipCode                 | 5-digit postal zip code of the insured property                      |
 | originalNBDate                  | The original new business date of the insured property               |
@@ -60,9 +60,9 @@ This matching procedure can result in the following outcomes:
 - 1 match: The claim was matched one-to-one with a policy. This is the ideal outcome that we should expect to see most of the time.  
 - ≥2 matches: There are multiple potential policy matches that could be associated with the claim. In this case, the specific policy associated with the claim is ambiguous. 
 
-Among 964,409 claims from the 2010-2025 period, 892,563 (92.6%) were matched one-to-one with a policy. A total of 11,177 (1.2%) claims were excluded due to missing data, 3,772 (0.4%) were excluded because no matching policy record was found, and 56,849 (5.9%) were excluded because multiple potential policy matches were found. A small number of claims (n=48) were also excluded due to contradictory geographic information (e.g., state implied by census block group field does not match the property state field). 
+Among 974,639 claims from the 2010-2025 period, 904,229 (92.8%) were matched one-to-one with a policy. A total of 11,210 (1.2%) claims were excluded due to missing data, 245 (<0.1%) were excluded because no matching policy record was found, and 58,899 (6.0%) were excluded because multiple potential policy matches were found. A small number of claims (n=56) were also excluded due to contradictory geographic information (e.g., state implied by census block group field does not match the property state field). 
 
-As part of this analysis, a modified version of the [FIMA NFIP Redacted Claims v2](https://www.fema.gov/openfema-data-page/fima-nfip-redacted-claims-v2) dataset was produced that contains the following additional data fields: 
+As part of this analysis, a modified version of the [NFIP Redacted Claims v3](https://www.fema.gov/openfema-data-page/nfip-redacted-claims-v3) dataset was produced that contains the following additional data fields: 
 
 | Variable         | Description                                                                 |
 |------------------|-----------------------------------------------------------------------------|
@@ -73,9 +73,6 @@ As part of this analysis, a modified version of the [FIMA NFIP Redacted Claims v
 
 ## Census geographies
 
-OpenFEMA used a third-party service to geocode their claim and policy data, and unfortunately did not capture the vintage year of Census geographies such as tracts and block groups. An analysis of the `censusBlockGroupFips` data field suggests that the OpenFEMA datasets use a mix of GEOIDs from the 2010, 2020, and 2000 vintage years. However, because GEOIDs are often reused across vintage years, there is no way to unambiguously determine which vintage was used to geocode a specific record. Because the same GEOID can be used to represent different geographic units across vintage years, this implies that the `censusBlockGroupFips` data field might change over time for a given property location. 
+OpenFEMA used a third-party service to geocode their claim and policy data, and unfortunately did not capture the vintage year of Census geographies such as tracts and block groups. An analysis of the `censusGeoid` data field suggests that the OpenFEMA datasets use a mix of GEOIDs from the 2010, 2020, and 2000 vintage years. However, because GEOIDs are often reused across vintage years, there is no way to unambiguously determine which vintage was used to geocode a specific record. Because the same GEOID can be used to represent different geographic units across vintage years, this implies that the `censusGeoid` data field might change over time for a given property location. 
 
 To address this issue, we use [NHGIS geographic crosswalks](https://www.nhgis.org/geographic-crosswalks) to create a lookup table that describes the overlap between block groups from various vintage years. For example, the geographic units described by GEOID `440010301001` (which appears in the 2000, 2010, and 2020 vintages) overlap with the geographic units described by the following GEOIDs: `440070107021` and `440070107023` (both of which appear in the 2020 vintage). As such, when matching individual policy and claim records, a record with a GEOID of `440010301001` is allowed to match to records with a GEOID of `440010301001`, `440070107021`, or `440070107023`. 
-
-
-
