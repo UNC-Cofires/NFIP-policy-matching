@@ -60,7 +60,7 @@ This matching procedure can result in the following outcomes:
 - 1 match: The claim was matched one-to-one with a policy. This is the ideal outcome that we should expect to see most of the time.  
 - ≥2 matches: There are multiple potential policy matches that could be associated with the claim. In this case, the specific policy associated with the claim is ambiguous. 
 
-Among 974,639 claims from the 2010-2025 period, 904,229 (92.8%) were matched one-to-one with a policy. A total of 11,210 (1.2%) claims were excluded due to missing data, 245 (<0.1%) were excluded because no matching policy record was found, and 58,899 (6.0%) were excluded because multiple potential policy matches were found. A small number of claims (n=56) were also excluded due to contradictory geographic information (e.g., state implied by census block group field does not match the property state field). 
+Among 974,639 claims from the 2010-2026 period, 904,229 (92.8%) were matched one-to-one with a policy. A total of 11,210 (1.2%) claims were excluded due to missing data, 245 (<0.1%) were excluded because no matching policy record was found, and 58,899 (6.0%) were excluded because multiple potential policy matches were found. A small number of claims (n=56) were also excluded due to contradictory geographic information (e.g., state implied by census block group field does not match the property state field). 
 
 As part of this analysis, a modified version of the [NFIP Redacted Claims v3](https://www.fema.gov/openfema-data-page/nfip-redacted-claims-v3) dataset was produced that contains the following additional data fields: 
 
